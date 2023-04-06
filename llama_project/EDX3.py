@@ -141,7 +141,7 @@ class TradingDataManager:
     def analyze_sentiments_real_time(self, text):
         # Code pour intégrer Llama.cpp et utiliser son analyse des sentiments
         result = llama_cpp.analyze_sentiment(text)  # Remplacez par le code d'intégration de Llama.cpp
-        adjusted_signal = self.strategy_with_llama(sentiment_score, result)
+        adjusted_signal = self.strategy_with_llama(synthesized_sentiments, result)
         return adjusted_signal
 
     async def connect_websocket(self, websocket_url: str):
@@ -350,15 +350,13 @@ class CombinedTradingBot:
         X_train, y_train, X_val, y_val = self.data_manager.preprocess_data()
 
         # Add sentiment analysis data (offline)
-        sentiment_scores_offline = sentiment_scores
-        for i in range(len(X_train)):
-        sentiment_scores_offline.append(self.analyze_sentiment(X_train[i]))
-        X_train = np.concatenate((X_train, np.array(sentiment_scores_offline).reshape(-1, 1)), axis=1)
+        sentiment_score_train = self.analyze_sentiments(X_train)
+        sentiment_scores_offline_train = [sentiment_score_train] * len(X_train)
+        X_train = np.concatenate((X_train, np.array(sentiment_scores_offline_train).reshape(-1, 1)), axis=1)
 
-        sentiment_scores_offline = sentiment_scores
-        for i in range(len(X_val)):
-        sentiment_scores_offline.append(self.analyze_sentiment(X_val[i]))
-        X_val = np.concatenate((X_val, np.array(sentiment_scores_offline).reshape(-1, 1)), axis=1)
+        sentiment_score_val = self.analyze_sentiments(X_val)
+        sentiment_scores_offline_val = [sentiment_score_val] * len(X_val)
+        X_val = np.concatenate((X_val, np.array(sentiment_scores_offline_val).reshape(-1, 1)), axis=1)
 
         # Add real-time sentiment analysis data
         real_time_sentiment_scores = [self.real_time_sentiment_score] * len(X_train)
@@ -724,7 +722,7 @@ class CombinedTradingBot:
 
             # Vérifiez si la marge bénéficiaire nette est acceptable et si le temps de transaction est conforme aux critères de gestion des risques
                base_arbitrage_decision_threshold = self.config["ARBITRAGE_DECISION_THRESHOLD"]
-               adjusted_arbitrage_decision_threshold = base_arbitrage_decision_threshold * (1 + sentiments_real_time)
+               adjusted_arbitrage_decision_threshold = base_arbitrage_decision_threshold * (1 + synthesized_sentiments)
 
             if net_profit_margin >= adjusted_arbitrage_decision_threshold and self.check_risk_management(pair, exchange_transaction_times):
             # Déterminez les échanges et les prix d'achat et de vente pour les transactions d'arbitrage
